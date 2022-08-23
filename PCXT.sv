@@ -297,7 +297,7 @@ hps_io #(.CONF_STR(CONF_STR), .PS2DIV(2000), .PS2WE(1), .WIDE(1)) hps_io
 (
 	.clk_sys(clk_chipset),
 	.HPS_BUS(HPS_BUS),
-	.EXT_BUS(),
+	.EXT_BUS(EXT_BUS),
 	.gamma_bus(gamma_bus),
 
 	.forced_scandoubler(forced_scandoubler),
@@ -336,6 +336,31 @@ hps_io #(.CONF_STR(CONF_STR), .PS2DIV(2000), .PS2WE(1), .WIDE(1)) hps_io
 	.ioctl_addr(ioctl_addr),
 	.ioctl_dout(ioctl_data),
 	.ioctl_wait(ioctl_wait)
+);
+
+
+wire [15:0] mgmt_din;
+wire [15:0] mgmt_dout;
+wire [15:0] mgmt_addr;
+wire        mgmt_rd;
+wire        mgmt_wr;
+wire  [7:0] mgmt_req;
+assign mgmt_req[5:0] = 6'b000000;
+
+wire [35:0] EXT_BUS;
+hps_ext hps_ext
+(
+	.clk_sys(clk_chipset),
+	.EXT_BUS(EXT_BUS),
+
+	.ext_din(mgmt_din),
+	.ext_dout(mgmt_dout),
+	.ext_addr(mgmt_addr),
+	.ext_rd(mgmt_rd),
+	.ext_wr(mgmt_wr),
+
+	.ext_req(mgmt_req),
+	.ext_hotswap(2'b00)
 );
 
 ///////////////////////   CLOCKS   ///////////////////////////////
@@ -759,6 +784,15 @@ end
         .sdram_udqm                         (SDRAM_DQMH),
 		  .ems_enabled                        (~status[11]),
 		  .ems_address                        (status[13:12]),
+        .mgmt_readdata                      (mgmt_din),
+        .mgmt_writedata                     (mgmt_dout),
+        .mgmt_address                       (mgmt_addr),
+        .mgmt_write                         (mgmt_wr),
+        .mgmt_read                          (mgmt_rd),
+		  .clock_rate                         (cur_rate),
+		  .floppy_wp                          (status[2:1]),
+		  .fdd_request                        (mgmt_req[7:6]),
+
         .tandy_mode                         (tandy_mode)
     );
 

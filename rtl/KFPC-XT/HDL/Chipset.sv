@@ -120,6 +120,15 @@ module CHIPSET (
 	 // EMS
 	 input   logic           ems_enabled,
 	 input   logic   [1:0]   ems_address,
+    // FDD
+    input   logic   [15:0]  mgmt_address,
+    input   logic           mgmt_read,
+    output  logic   [15:0]  mgmt_readdata,
+    input   logic           mgmt_write,
+    input   logic   [15:0]  mgmt_writedata,
+    input   logic   [27:0]  clock_rate,
+    input   logic   [1:0]   floppy_wp,
+    output  logic   [1:0]   fdd_request,
     // Mode Switch
     input   logic           tandy_mode
 );
@@ -149,6 +158,8 @@ module CHIPSET (
 	 logic           ems_b3;
 	 logic           ems_b4;
 	 
+    logic           fdd_dma_req;
+
 
    always_ff @(posedge clock) begin
        if (reset)
@@ -217,7 +228,7 @@ module CHIPSET (
         .memory_write_n_ext                 (memory_write_n_ext),
         .memory_write_n_direction           (memory_write_n_direction),
         .no_command_state                   (no_command_state),
-        .dma_request                        ({dma_request[3:1], DRQ0}),
+        .dma_request                        ({dma_request[3], fdd_dma_req, dma_request[1], DRQ0}),
         .dma_acknowledge_n                  (dma_acknowledge_n),
         .address_enable_n                   (address_enable_n),
         .terminal_count_n                   (terminal_count_n)
@@ -226,6 +237,7 @@ module CHIPSET (
     PERIPHERALS u_PERIPHERALS (
         .clock                              (clock),
 		  .clk_sys                            (clk_sys),
+        .cpu_clock                          (cpu_clock),
 		  .clk_uart                           (clk_uart),
         .peripheral_clock                   (peripheral_clock),
 		  .color                              (color),
@@ -301,6 +313,17 @@ module CHIPSET (
 	     .ems_b2                            (ems_b2),
 	     .ems_b3                            (ems_b3),
 	     .ems_b4                            (ems_b4),
+        .mgmt_address                       (mgmt_address),
+        .mgmt_read                          (mgmt_read),
+        .mgmt_readdata                      (mgmt_readdata),
+        .mgmt_write                         (mgmt_write),
+        .mgmt_writedata                     (mgmt_writedata),
+        .clock_rate                         (clock_rate),
+        .floppy_wp                          (floppy_wp),
+        .fdd_request                        (fdd_request),
+        .fdd_dma_req                        (fdd_dma_req),
+        .fdd_dma_ack                        (~dma_acknowledge_n[2]),
+        .terminal_count                     (terminal_count_n),
         .tandy_mode                         (tandy_mode)
     );
 
