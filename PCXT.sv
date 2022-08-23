@@ -213,19 +213,27 @@ assign VIDEO_ARY = (!ar) ? 12'd3 : 12'd0;
 
 `include "build_id.v" 
 localparam CONF_STR = {
-	"PCXT;;",
+//	"PCXT;;",
+	"AO486;;", // PCXT (The only thing left to do is to prepare the project in Main_MiSTer)
 	"-;",
    "O3,Model,IBM PCXT,Tandy 1000;",
 	"OHI,CPU Speed,4.77Mhz,7.16Mhz,14.318MHz;",
 	"-;",
-	"O7,Splash Screen,Yes,No;",
+	"S0,IMGIMAVFD,Floppy A:;",
+	"S1,IMGIMAVFD,Floppy B:;",
+	"O12,Write Protect,None,A:,B:,A: & B:;",
 	"-;",
-	"P1,FDD & HDD;",
-	"P1-;",
-	"P1S1,IMG,FDD Image:;",
-	"P1S0,IMG,HDD Image:;",
-	"P1-;",
-	"P1OJK,Write Protect,None,FDD,HDD,FDD & HDD;",
+	"F1,ROM,Load BIOS  (F000);",	
+	"F2,ROM,Load XTIDE (EC00);",	
+	"-;",
+    "O7,Splash Screen,Yes,No;",
+	"-;",
+//	"P1,FDD & HDD;",
+//	"P1-;",
+//	"P1S1,IMG,FDD Image:;",
+//	"P1S0,IMG,HDD Image:;",
+//	"P1-;",
+//	"P1OJK,Write Protect,None,FDD,HDD,FDD & HDD;",
 	"P1-;",
 	"P1OLM,Speed,115200,230400,460800,921600;",
 	"P1-;",
@@ -234,7 +242,7 @@ localparam CONF_STR = {
 	"P2OA,Adlib,On,Invisible;",
 	"P2O7,DSS/Covox,Unplugged,Plugged;",
 	"P2-;",
-	"P2O12,Scandoubler Fx,None,HQ2x,CRT 25%,CRT 50%;",
+//	"P2O12,Scandoubler Fx,None,HQ2x,CRT 25%,CRT 50%;",
 	"P2O89,Aspect ratio,Original,Full Screen,[ARC1],[ARC2];",	
 	"P2O4,Video Output,CGA/Tandy,MDA;",
 	"P2OEG,Display,Full Color,Green,Amber,B&W,Red,Blue,Fuchsia,Purple;",	
@@ -676,7 +684,8 @@ end
     logic   [7:0]   port_c_in;	 
 	 reg     [7:0]   sw;
 	 
-	wire [1:0] scale = status[2:1];
+	//wire [1:0] scale = status[2:1];
+	wire [1:0] scale = 'h0;
 	wire tandy_mode = status[3];
 	wire mda_mode = status[4];	 
 	wire [2:0] screen_mode = status[16:14];
