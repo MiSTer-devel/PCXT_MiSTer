@@ -254,7 +254,7 @@ localparam CONF_STR = {
 
 wire forced_scandoubler;
 wire  [1:0] buttons;
-wire [31:0] status;
+wire [63:0] status;
 //wire [10:0] ps2_key;
 
 //VHD	
@@ -285,14 +285,15 @@ wire        ioctl_download;
 wire  [7:0] ioctl_index;
 wire        ioctl_wr;
 wire [24:0] ioctl_addr;
-wire  [7:0] ioctl_data;
+wire [15:0] ioctl_data;
+reg         ioctl_wait = 1'b0;
 
 wire        clk_uart;
 
 wire [21:0] gamma_bus;
 wire        adlibhide = status[10];
 
-hps_io #(.CONF_STR(CONF_STR), .PS2DIV(2000), .PS2WE(1)) hps_io
+hps_io #(.CONF_STR(CONF_STR), .PS2DIV(2000), .PS2WE(1), .WIDE(1)) hps_io
 (
 	.clk_sys(clk_chipset),
 	.HPS_BUS(HPS_BUS),
@@ -333,7 +334,8 @@ hps_io #(.CONF_STR(CONF_STR), .PS2DIV(2000), .PS2WE(1)) hps_io
 	.ioctl_index(ioctl_index),
 	.ioctl_wr(ioctl_wr),
 	.ioctl_addr(ioctl_addr),
-	.ioctl_dout(ioctl_data)	
+	.ioctl_dout(ioctl_data),
+	.ioctl_wait(ioctl_wait)
 );
 
 ///////////////////////   CLOCKS   ///////////////////////////////
@@ -507,6 +509,69 @@ end
 
 //////////////////////////////////////////////////////////////////
 
+logic   [3:0]   romwctl_state = 4'h0;
+logic           romwctl_wr = 1'b0;
+logic   [24:0]  romwctl_addr = 'h0;
+logic   [15:0]  romwctl_data = 'h0;
+logic           romwctl_download = 1'b0;
+logic   [7:0]   romwctl_index = 'h0;
+
+always @(negedge clk_chipset) begin
+	casez (romwctl_state)
+		4'h0: begin
+			if (~ioctl_wr) begin
+				romwctl_state <= 4'h0;
+				romwctl_wr <= 1'h0;
+				ioctl_wait <= 1'b0;
+			end
+			else begin
+				romwctl_state <= 4'h1;
+				romwctl_wr <= 1'h1;
+				ioctl_wait <= 1'b1;
+			end
+			romwctl_addr <= ioctl_addr;
+			romwctl_data <= ioctl_data;
+			romwctl_download <= ioctl_download;
+			romwctl_index <= ioctl_index;
+		end
+		4'h1: begin
+			romwctl_state <= 4'h2;
+			romwctl_wr <= 1'h1;
+			ioctl_wait <= 1'b1;
+			romwctl_addr <= romwctl_addr + 'h1;
+			romwctl_data <= {8'h00, romwctl_data[15:8]};
+			romwctl_download <= romwctl_download;
+			romwctl_index <= romwctl_index;
+		end
+		4'h2: begin
+			if (~ioctl_wr)
+				romwctl_state <= 4'h0;
+			else
+				romwctl_state <= 4'h2;
+			romwctl_wr <= 1'h0;
+			ioctl_wait <= 1'b0;
+			romwctl_addr <= 'h0;
+			romwctl_data <= 'h0;
+			romwctl_download <= 'h0;
+			romwctl_index <= 'h0;
+		end
+		default: begin
+			romwctl_state <= 4'h0;
+			romwctl_wr <= 1'h0;
+			ioctl_wait <= 1'b0;
+			romwctl_addr <= 'h0;
+			romwctl_data <= 'h0;
+			romwctl_download <= 'h0;
+			romwctl_index <= 'h0;
+        end
+	endcase
+end
+
+//////////////////////////////////////////////////////////////////
+
+    reg [27:0] cur_rate;
+    always @(posedge CLK_50M) cur_rate <= 50000000;
+
 	wire [5:0] r, g, b;	
 	reg [7:0] raux, gaux, baux;	
 	
@@ -665,11 +730,11 @@ end
 		  .clk_en_opl2                        (cen_opl2), // clk_en_opl2
 		  .adlibhide                          (adlibhide),
 		  .tandy_video                        (tandy_mode),
-		  .ioctl_download                     (ioctl_download),
-		  .ioctl_index                        (ioctl_index),
-		  .ioctl_wr                           (ioctl_wr),
-		  .ioctl_addr                         (ioctl_addr),
-		  .ioctl_data                         (ioctl_data),		  
+		  .ioctl_download                     (romwctl_download),
+		  .ioctl_index                        (romwctl_index),
+		  .ioctl_wr                           (romwctl_wr),
+		  .ioctl_addr                         (romwctl_addr),
+		  .ioctl_data                         (romwctl_data[7:0]),		  
 		  .clk_uart                          (clk_uart),
 	     .uart_rx                           (uart_rx),
 	     .uart_tx                           (uart_tx),
