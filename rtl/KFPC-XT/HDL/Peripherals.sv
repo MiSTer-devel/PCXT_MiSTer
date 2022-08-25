@@ -9,6 +9,7 @@ module PERIPHERALS #(
 	 input   logic           clk_sys,
      input  logic           cpu_clock,
     input   logic           peripheral_clock,	 
+	 input   logic   [1:0]   turbo_mode,
 	 input   logic           color,
     input   logic           reset,
     // CPU
@@ -60,6 +61,12 @@ module PERIPHERALS #(
     input   logic           ps2_data,
     output  logic           ps2_clock_out,
     output  logic           ps2_data_out,
+	 input   logic           joy0_type,
+	 input   logic           joy1_type,
+	 input   logic   [31:0]  joy0,
+	 input   logic   [31:0]  joy1,
+	 input   logic   [15:0]  joya0,
+	 input   logic   [15:0]  joya1,
 	 // SOUND
 	 input   logic           clk_en_44100, // COVOX/DSS clock enable
 	 input   logic           dss_covox_en,
@@ -162,6 +169,8 @@ module PERIPHERALS #(
     wire    timer_chip_select_n     = iorq && chip_select_n[2];
     wire    ppi_chip_select_n       = iorq && chip_select_n[3];
     assign  dma_page_chip_select_n  = iorq && chip_select_n[4];
+
+	 wire    joystick_select        = (iorq && ~address_enable_n && address[15:3] == (16'h0200 >> 3)); // 0x200 .. 0x207
 	 
 	 wire    tandy_chip_select_n    = ~(iorq && ~address_enable_n && address[15:3] == (16'h00c0 >> 3)); // 0xc0 - 0xc7
 	 wire    opl_chip_select_n      = ~(iorq && ~address_enable_n && address[15:1] == (16'h0388 >> 1)); // 0x388 .. 0x389
@@ -350,6 +359,7 @@ module PERIPHERALS #(
     logic   [7:0]   keycode;
     logic   [7:0]   tandy_keycode;
     logic           prev_ps2_reset;
+    logic           prev_ps2_reset_n;
     logic           lock_recv_clock;
 
     wire    clear_keycode = port_b_out[7];
@@ -742,7 +752,7 @@ module PERIPHERALS #(
     // Sets up the card to generate a video signal
     // that will work with a standard VGA monitor
     // connected to the VGA port.
-    parameter MDA_70HZ = 0;
+    localparam MDA_70HZ = 0;
 	 
     // wire composite_on;
     wire thin_font;
@@ -951,33 +961,41 @@ module PERIPHERALS #(
     logic   [15:0]  rom_address;
     logic           bios_select_n_1;
     logic           xtide_select_n_1;
-
-    always_ff @(posedge clock) begin
+	 
+    wire pcxt_loading = ioctl_download && ioctl_index[5:0] == 0;
+	 wire tandy_loading = ioctl_download && ioctl_index[5:0] == 1;
+	 wire xtide_loading = ioctl_download && ioctl_index == 2;
+ 
+    wire pcxt_loader  = (pcxt_loading && ioctl_addr[24:16] == 9'b000000000);
+	 wire tandy_loader  = (tandy_loading && ioctl_addr[24:16] == 9'b000000000);
+	 wire bios_loader = (pcxt_loader || tandy_loader);
+	 reg bios_loaded = 1'b0;
+	 reg bios_loading = 1'b0;
+	
+	always_ff @(posedge clock) begin
+	  
         rom_address      <= address[15:0];
         bios_select_n_1  <= bios_select_n;
         xtide_select_n_1 <= xtide_select_n;
-    end
-
-   wire bios_loader  = (ioctl_download && ioctl_index < 2 && ioctl_addr[24:16] == 9'b000000000);
-   wire xtide_loader = ((ioctl_download && ioctl_index == 2) ||
-                        (ioctl_download && ioctl_index == 0 && ioctl_addr[24:16] == 9'b000000001));
+   end
 	
 	bios bios
 	(
-        .clka(bios_loader ? clk_sys : clock),
+        .clka(bios_loader ? clk_sys : clock),		  
         .ena((~bios_select_n_1) || ioctl_download),
         .wea(bios_loader && ioctl_wr),
-        .addra(bios_loader ? ioctl_addr[15:0] : rom_address[15:0]),
+        .addra(bios_loader ? { tandy_loader, ioctl_addr[15:0] } : { tandy_mode, rom_address[15:0] }),
         .dina(ioctl_data),
-        .douta(bios_cpu_dout)
+        .douta(bios_cpu_dout),
+		  
 	);
 	
 	xtide xtide
 	(
-        .clka(xtide_loader ? clk_sys : clock),
+        .clka(xtide_loading ? clk_sys : clock),
         .ena((~xtide_select_n_1) || ioctl_download),
-        .wea(xtide_loader && ioctl_wr),
-        .addra(xtide_loader ? ioctl_addr[13:0] : rom_address[13:0]),
+        .wea(xtide_loading && ioctl_wr),
+        .addra(xtide_loading ? ioctl_addr[13:0] : rom_address[13:0]),
         .dina(ioctl_data),
         .douta(xtide_cpu_dout)
 	);
@@ -1009,8 +1027,25 @@ module PERIPHERALS #(
         .video_g                    (video_g),
         .video_b                    (video_b)
     );
+	 
 	 */
 
+    logic [7:0] joy_data;
+	 
+    tandy_pcjr_joy joysticks
+	 (
+        .clk                       (clock),
+        .reset                     (reset),
+        .en                        (joystick_select && ~io_write_n),
+        .turbo_mode                (turbo_mode),
+        .joy0_type                 (joy0_type),
+        .joy1_type                 (joy1_type),
+        .joy0                      (joy0),
+        .joy1                      (joy1),
+        .joya0                     (joya0),
+        .joya1                     (joya1),
+        .d_out                     (joy_data)
+    );
     //
     // data_bus_out
     //
@@ -1075,6 +1110,10 @@ module PERIPHERALS #(
             data_bus_out_from_chipset <= 1'b1;				
 				data_bus_out <= {1'bx, dss_full, 6'bxxxxxx};
         end		  
+        else if (joystick_select && ~io_read_n) begin
+            data_bus_out_from_chipset <= 1'b1;
+            data_bus_out <= joy_data;
+        end
         else if ((~floppy0_select_n || fdd_dma_read_ack) && (~io_read_n)) begin
             data_bus_out_from_chipset <= 1'b1;
             data_bus_out <= fdd_readdata;

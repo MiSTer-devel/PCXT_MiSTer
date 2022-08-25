@@ -194,17 +194,17 @@ assign LED_DISK = 0;
 assign LED_POWER = 0;
 assign BUTTONS = 0;
 
-
+assign LED_USER = 0;
 //led fdd_led(clk_cpu, |mgmt_req[7:6], LED_USER);
 
 //////////////////////////////////////////////////////////////////
 
 // Status Bit Map:
-//             Upper                             Lower              
-// 0         1         2         3          4         5         6   
+//              Upper                          Lower
+// 0         1         2         3          4         5         6
 // 01234567890123456789012345678901 23456789012345678901234567890123
 // 0123456789ABCDEFGHIJKLMNOPQRSTUV 0123456789ABCDEFGHIJKLMNOPQRSTUV
-//  XXXX  XXXXXXXXXX
+// XXXXX XXXXXXXXXXXXXXXXX
 
 
 wire [1:0] ar = status[9:8];
@@ -213,50 +213,51 @@ assign VIDEO_ARY = (!ar) ? 12'd3 : 12'd0;
 
 `include "build_id.v" 
 localparam CONF_STR = {
-//	"PCXT;;",
-	"AO486;;", // PCXT (The only thing left to do is to prepare the project in Main_MiSTer)
+	"PCXT;;",
 	"-;",
-   "O3,Model,IBM PCXT,Tandy 1000;",
-	"OHI,CPU Speed,4.77Mhz,7.16Mhz,14.318MHz;",
-	"-;",
-	"S0,IMGIMAVFD,Floppy A:;",
-	"S1,IMGIMAVFD,Floppy B:;",
-	"O12,Write Protect,None,A:,B:,A: & B:;",
-	"-;",
-	"F1,ROM,Load BIOS  (F000);",	
-	"F2,ROM,Load XTIDE (EC00);",	
+	"O3,Model,IBM PCXT,Tandy 1000;",
+	"OHI,CPU Speed,4.77MHz,7.16MHz,14.318MHz;",
 	"-;",
     "O7,Splash Screen,Yes,No;",
 	"-;",
-//	"P1,FDD & HDD;",
-//	"P1-;",
-//	"P1S1,IMG,FDD Image:;",
-//	"P1S0,IMG,HDD Image:;",
-//	"P1-;",
-//	"P1OJK,Write Protect,None,FDD,HDD,FDD & HDD;",
+	"P1,FDD & HDD;",
 	"P1-;",
-	"P1OLM,Speed,115200,230400,460800,921600;",
+	"P1S0,IMGIMAVFD,Floppy A:;",
+	"P1S1,IMGIMAVFD,Floppy B:;",
+	"P1O12,Write Protect,None,A:,B:,A: & B:;",
+	"P1-;",
+	"P1S2,IMG,HDD Image:;",
+	"P1-;",
+	"P1OLM,HDD Speed,115200,230400,460800,921600;",
 	"P1-;",
 	"P2,Audio & Video;",
 	"P2-;",
 	"P2OA,Adlib,On,Invisible;",
-	"P2O7,DSS/Covox,Unplugged,Plugged;",
+	"P2O6,DSS/Covox,Unplugged,Plugged;",
 	"P2-;",
-//	"P2O12,Scandoubler Fx,None,HQ2x,CRT 25%,CRT 50%;",
+	"P2O12,Scandoubler Fx,None,HQ2x,CRT 25%,CRT 50%;",
 	"P2O89,Aspect ratio,Original,Full Screen,[ARC1],[ARC2];",	
 	"P2O4,Video Output,CGA/Tandy,MDA;",
 	"P2OEG,Display,Full Color,Green,Amber,B&W,Red,Blue,Fuchsia,Purple;",	
 	"P3,Hardware;",
 	"P3-;",
-	"P3OB,Lo-tech 2MB EMS, Enabled, Disabled;",
+	"P3OB,Lo-tech 2MB EMS,Enabled,Disabled;",
 	"P3OCD,EMS Frame,A000,C000,D000;",
 	"P3-;",
+	"P3ON,Joystick 1, Analog, Digital;",
+	"P3OO,Joystick 2, Analog, Digital;",
+	"P3OP,Swap Joysticks,No,Yes;",
+	"P3-;",
 	"-;",
-//	"F1,ROM,Load BIOS  (F000);",	
-//	"F2,ROM,Load XTIDE (EC00);",	
-//	"-;",
-	"T0,Reset;",
-	"R0,Reset and close OSD;",
+	"P4,BIOS;",
+	"P4-;",
+	"P4FC0,ROM,PCXT BIOS;",
+	"P4FC1,ROM,Tandy BIOS;",
+	"P4-;",
+	"P4FC2,ROM,Custom XTIDE (EC00);",
+	"-;",
+	"R0,Reset & apply model;",
+	"J,Fire 1, Fire 2;",
 	"V,v",`BUILD_DATE 
 };
 
@@ -301,6 +302,8 @@ wire        clk_uart;
 wire [21:0] gamma_bus;
 wire        adlibhide = status[10];
 
+wire [31:0] joy0, joy1;
+wire [15:0] joya0, joya1;
 hps_io #(.CONF_STR(CONF_STR), .PS2DIV(2000), .PS2WE(1), .WIDE(1)) hps_io
 (
 	.clk_sys(clk_chipset),
@@ -336,6 +339,10 @@ hps_io #(.CONF_STR(CONF_STR), .PS2DIV(2000), .PS2WE(1), .WIDE(1)) hps_io
 //	.ps2_mouse_data_out	(ps2_mouse_data_in),
 
 	//.ps2_key(ps2_key),
+	.joystick_0(joy0),
+	.joystick_1(joy1),
+	.joystick_l_analog_0(joya0),
+	.joystick_l_analog_1(joya1),
 
 	//ioctl
 	.ioctl_download(ioctl_download),
@@ -401,7 +408,7 @@ pll pll
 	.locked(pll_locked)
 );
 
-wire reset_wire = RESET | status[0] | buttons[1] | !pll_locked | (status[14] && usdImgMtd) | (ioctl_download && ioctl_index == 0) | splashscreen;
+wire reset_wire = RESET | status[0] | buttons[1] | !pll_locked | (status[14] && usdImgMtd) | splashscreen;
 
 //////////////////////////////////////////////////////////////////
 
@@ -519,8 +526,11 @@ always @(negedge clk_chipset, posedge reset) begin
 		reset_cpu_ff <= reset;
 end
 
+reg tandy_mode = 0;
+
 always @(negedge clk_chipset, posedge reset) begin
 	if (reset) begin
+		tandy_mode <= status[3];		
 		reset_cpu <= 1'b1;
 		reset_cpu_count <= 16'h0000;
 	end
@@ -684,9 +694,7 @@ end
     logic   [7:0]   port_c_in;	 
 	 reg     [7:0]   sw;
 	 
-	//wire [1:0] scale = status[2:1];
-	wire [1:0] scale = 'h0;
-	wire tandy_mode = status[3];
+	wire [1:0] scale = status[2:1];	
 	wire mda_mode = status[4];	 
 	wire [2:0] screen_mode = status[16:14];
 	 
@@ -699,6 +707,7 @@ end
         .cpu_clock                            (clk_cpu),
 		  .clk_sys                            (clk_chipset),
 		  .peripheral_clock                   (pclk),
+		  .turbo_mode                         (status[18:17]),
 		  .color										  (screen_mode == 3'd0),
         .reset                              (reset_cpu),
         .sdram_reset                        (reset),
@@ -757,8 +766,14 @@ end
 	     .ps2_data                           (device_data),
 	     .ps2_clock_out                      (ps2_kbd_clk_out),
 	     .ps2_data_out                       (ps2_kbd_data_out),
+		  .joy0_type                          (status[23]),
+		  .joy1_type                          (status[24]),
+        .joy0                               (status[25] ? joy1 : joy0),
+        .joy1                               (status[25] ? joy0 : joy1),
+		  .joya0                              (status[25] ? joya1 : joya0),
+		  .joya1                              (status[25] ? joya0 : joya1),
 		  .clk_en_44100                       (cen_44100),
-		  .dss_covox_en                       (status[7]),
+		  .dss_covox_en                       (status[6]),
 		  .lclamp                             (AUDIO_L),
 		  .rclamp                             (AUDIO_R),		  
 		  .clk_en_opl2                        (cen_opl2), // clk_en_opl2
