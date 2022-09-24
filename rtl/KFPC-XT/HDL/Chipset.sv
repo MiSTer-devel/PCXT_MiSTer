@@ -88,7 +88,7 @@ module CHIPSET (
 	 input   logic           adlibhide,
 	 // TANDY
 	 input   logic           tandy_video,
-	 output  logic   [7:0]   tandy_snd_e,
+	 output  logic   [13:0]  tandy_snd_e,
 	 output  logic           tandy_16_gfx,
 	 // IOCTL
     input   logic           ioctl_download,
