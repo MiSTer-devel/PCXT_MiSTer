@@ -125,27 +125,27 @@ module sys_top
 );
 
 //////////////////////  Secondary SD  ///////////////////////////////////
-wire SD_CS, SD_CLK, SD_MOSI;
-
-`ifndef MISTER_DUAL_SDRAM
-	wire sd_miso = SW[3] | SDIO_DAT[0];
-`else
-	wire sd_miso = 1;
-`endif
-wire SD_MISO = mcp_sdcd ? sd_miso : SD_SPI_MISO;
-
-`ifndef MISTER_DUAL_SDRAM
-	assign SDIO_DAT[2:1]= 2'bZZ;
-	assign SDIO_DAT[3]  = SW[3] ? 1'bZ  : SD_CS;
-	assign SDIO_CLK     = SW[3] ? 1'bZ  : SD_CLK;
-	assign SDIO_CMD     = SW[3] ? 1'bZ  : SD_MOSI;
-	assign SD_SPI_CS    = mcp_sdcd ? ((~VGA_EN & sog & ~cs1) ? 1'b1 : 1'bZ) : SD_CS;
-`else
-	assign SD_SPI_CS    = mcp_sdcd ? 1'bZ : SD_CS;
-`endif
-
-assign SD_SPI_CLK  = mcp_sdcd ? 1'bZ : SD_CLK;
-assign SD_SPI_MOSI = mcp_sdcd ? 1'bZ : SD_MOSI;
+//wire SD_CS, SD_CLK, SD_MOSI;
+//
+//`ifndef MISTER_DUAL_SDRAM
+//	wire sd_miso = SW[3] | SDIO_DAT[0];
+//`else
+//	wire sd_miso = 1;
+//`endif
+//wire SD_MISO = mcp_sdcd ? sd_miso : SD_SPI_MISO;
+//
+//`ifndef MISTER_DUAL_SDRAM
+//	assign SDIO_DAT[2:1]= 2'bZZ;
+//	assign SDIO_DAT[3]  = SW[3] ? 1'bZ  : SD_CS;
+//	assign SDIO_CLK     = SW[3] ? 1'bZ  : SD_CLK;
+//	assign SDIO_CMD     = SW[3] ? 1'bZ  : SD_MOSI;
+//	assign SD_SPI_CS    = mcp_sdcd ? ((~VGA_EN & sog & ~cs1) ? 1'b1 : 1'bZ) : SD_CS;
+//`else
+//	assign SD_SPI_CS    = mcp_sdcd ? 1'bZ : SD_CS;
+//`endif
+//
+//assign SD_SPI_CLK  = mcp_sdcd ? 1'bZ : SD_CLK;
+//assign SD_SPI_MOSI = mcp_sdcd ? 1'bZ : SD_MOSI;
 
 //////////////////////  LEDs/Buttons  ///////////////////////////////////
 
@@ -1670,15 +1670,18 @@ emu emu
 	.BUTTONS(btn),
 	.OSD_STATUS(osd_status),
 
-	.SD_SCK(SD_CLK),
-	.SD_MOSI(SD_MOSI),
-	.SD_MISO(SD_MISO),
-	.SD_CS(SD_CS),
-`ifdef MISTER_DUAL_SDRAM
-	.SD_CD(mcp_sdcd),
-`else
-	.SD_CD(mcp_sdcd & (SW[0] ? VGA_HS : (SW[3] | SDCD_SPDIF))),
-`endif
+//	.SD_SCK(SD_CLK),
+//	.SD_MOSI(SD_MOSI),
+//	.SD_MISO(SD_MISO),
+//	.SD_CS(SD_CS),
+//`ifdef MISTER_DUAL_SDRAM
+//	.SD_CD(mcp_sdcd),
+//`else
+//	.SD_CD(mcp_sdcd & (SW[0] ? VGA_HS : (SW[3] | SDCD_SPDIF))),
+//`endif
+	.SDIO_DAT(SDIO_DAT),
+	.SDIO_CMD(SDIO_CMD),
+	.SDIO_CLK(SDIO_CLK),
 
 	.UART_CTS(uart_rts),
 	.UART_RTS(uart_cts),
