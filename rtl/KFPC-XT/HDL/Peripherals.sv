@@ -107,6 +107,15 @@ module PERIPHERALS #(
         output  logic           ems_b2,
         output  logic           ems_b3,
         output  logic           ems_b4,
+        // MMC interface
+        input   logic           use_mmc,
+        output  logic           mmc_clk,
+        input   logic           mmc_cmd_in,
+        output  logic           mmc_cmd_out,
+        output  logic           mmc_cmd_io,
+        input   logic           mmc_dat_in,
+        output  logic           mmc_dat_out,
+        output  logic           mmc_dat_io,
         // FDD
         input   logic   [15:0]  mgmt_address,
         input   logic           mgmt_read,
@@ -1143,6 +1152,8 @@ end
     logic           prev_ide0_io_write;
     logic [3:0]     ide0_address_1;
     logic [15:0]    ide0_writedata;
+    logic [15:0]    ide_readdata;
+    logic           ide_ignore;
 
     assign mgmt_ide0_cs     = (mgmt_address[15:8] == 8'hF0);
 
@@ -1175,7 +1186,7 @@ end
 
         .io_address     (ide0_address_1),
         .io_read        (ide0_io_read   & ~prev_ide0_io_read),
-        .io_readdata    (ide0_data_bus_in),
+        .io_readdata    (ide_readdata),
         .io_write       (~ide0_io_write & prev_ide0_io_write),
         .io_writedata   (ide0_writedata),
         .io_32          (0),
@@ -1187,8 +1198,47 @@ end
         .mgmt_writedata             (mgmt_writedata),
         .mgmt_readdata              (mgmt_ide0_readdata),
         .mgmt_write                 (mgmt_write & mgmt_ide0_cs),
-        .mgmt_read                  (mgmt_read & mgmt_ide0_cs)
+        .mgmt_read                  (mgmt_read & mgmt_ide0_cs),
+
+        .primary_only               (use_mmc),
+        .ignore_access              (ide_ignore)
     );
+
+
+    //
+    // XTIDE-MMC
+    //
+    logic [15:0]    mmcide_readdata;
+
+    KFMMC_IDE #(
+        .init_spi_clock_cycle               (8'd100),
+        .normal_spi_clock_cycle             (8'd100),
+        .timeout                            (32'h000FFFFF)
+    ) kfmmc_ide (
+        .clock              (clock),
+        .reset              (reset),
+
+        .ide_cs1fx_n        (ide0_cs1fx),
+        .ide_cs3fx_n        (ide0_cs3fx),
+        .ide_io_read_n      (ide0_io_read_n),
+        .ide_io_write_n     (ide0_io_write_n),
+
+        .ide_address        (ide0_address),
+        .ide_data_bus_in    (ide0_data_bus_out),
+        .ide_data_bus_out   (mmcide_readdata),
+
+        .device_master      (1'b0),     // set secondary drive
+
+        .mmc_clk            (mmc_clk),
+        .mmc_cmd_in         (mmc_cmd_in),
+        .mmc_cmd_out        (mmc_cmd_out),
+        .mmc_cmd_io         (mmc_cmd_io),
+        .mmc_dat_in         (mmc_dat_in),
+        .mmc_dat_out        (mmc_dat_out),
+        .mmc_dat_io         (mmc_dat_io)
+    );
+
+    assign ide0_data_bus_in = ~ide_ignore ? ide_readdata : mmcide_readdata;
 
 
     //

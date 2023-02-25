@@ -107,11 +107,16 @@ module emu
         inout   [3:0] ADC_BUS,
 
         //SD-SPI
-        output        SD_SCK,
-        output        SD_MOSI,
-        input         SD_MISO,
-        output        SD_CS,
-        input         SD_CD,
+//        output        SD_SCK,
+//        output        SD_MOSI,
+//        input         SD_MISO,
+//        output        SD_CS,
+//        input         SD_CD,
+        //////////// SDIO ///////////
+        inout   [3:0] SDIO_DAT,
+        inout         SDIO_CMD,
+        output        SDIO_CLK,
+
 
         //High latency DDR3 RAM interface
         //Use for non-critical time purposes
@@ -211,6 +216,7 @@ module emu
 		"-;",
 		"S2,VHD,IDE 0-0;",
 		"S3,VHD,IDE 0-1;",
+		"OL,MMC(Beta),Disable,Enable(IDE 0-1);",
 		"-;",
 		"OHI,CPU Speed,4.77MHz,7.16MHz,9.54MHz,PC/AT 3.5MHz;",
 		"-;",
@@ -1096,6 +1102,14 @@ module emu
 		.uart2_dsr_n                        (uart_dsr),
 		.uart2_rts_n                        (uart_rts),
 		.uart2_dtr_n                        (uart_dtr),
+        .use_mmc                            (use_mmc),
+		.mmc_clk                            (mmc_clk),
+		.mmc_cmd_in                         (mmc_cmd_in),
+		.mmc_cmd_out                        (mmc_cmd_out),
+		.mmc_cmd_io                         (mmc_cmd_io),
+		.mmc_dat_in                         (mmc_dat_in),
+		.mmc_dat_out                        (mmc_dat_out),
+		.mmc_dat_io                         (mmc_dat_io),
 		.enable_sdram                       (1'b1),
 		.initilized_sdram                   (initilized_sdram),
 		.sdram_clock                        (SDRAM_CLK),
@@ -1366,6 +1380,35 @@ module emu
     wire uart2_cts = USER_IN[3];
     wire uart2_dsr = USER_IN[5];
     wire uart2_dcd = USER_IN[6];
+
+    //
+    ///////////////////////   MMC     ///////////////////////
+    //
+    logic use_mmc;
+    logic mmc_clk;
+    logic mmc_cmd_in;
+    logic mmc_cmd_out;
+    logic mmc_cmd_io;
+    logic mmc_dat_in;
+    logic mmc_dat_out;
+    logic mmc_dat_io;
+
+    always @(posedge clk_chipset)
+        if (reset)
+            use_mmc <= status[21];
+        else
+            use_mmc <= use_mmc;
+
+    assign  SDIO_CLK    = mmc_clk;
+
+    assign  SDIO_CMD    = (~mmc_cmd_io & ~mmc_cmd_out) ? 1'b0 : 1'bz;
+    assign  mmc_cmd_in  = SDIO_CMD;
+
+    assign  SDIO_DAT[0] = (~mmc_dat_io & ~mmc_dat_out) ? 1'b0 : 1'bz;
+    assign  mmc_dat_in  = SDIO_DAT[0];
+    assign  SDIO_DAT[1] = 1'b1;
+    assign  SDIO_DAT[2] = 1'b1;
+    assign  SDIO_DAT[3] = 1'b1;
 
     //
     ///////////////////////   VIDEO   ///////////////////////
