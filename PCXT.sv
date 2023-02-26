@@ -323,6 +323,8 @@ module emu
     reg         hgc_mode_video_ff;
     reg [2:0]   screen_mode_video_ff;
     reg         border_video_ff;
+    reg         cga_hw;
+    reg         hercules_hw;
 
     wire VGA_VBlank_border;
     wire std_hsyncwidth;
@@ -332,12 +334,16 @@ module emu
     always @(posedge CLK_VIDEO)
     begin
         scale_video_ff          <= scale;
-        hgc_mode_video_ff       <= hgc_mode & ~tandy_mode;
         screen_mode_video_ff    <= screen_mode;
         border_video_ff         <= border;
+        cga_hw                  <= ~status[44] | tandy_mode;
+        hercules_hw             <= ~status[45] & ~tandy_mode;
         VIDEO_ARX               <= (!ar) ? 12'd4 : (ar - 1'd1);
         VIDEO_ARY               <= (!ar) ? 12'd3 : 12'd0;
     end
+
+    always @(posedge clk_chipset)
+        hgc_mode_video_ff       <= hgc_mode & ~tandy_mode;
 
     hps_io #(.CONF_STR(CONF_STR), .PS2DIV(2000), .PS2WE(1), .WIDE(1)) hps_io 
 	(
@@ -1143,8 +1149,8 @@ module emu
 		.ram_read_wait_cycle                (ram_read_wait_cycle),
 		.ram_write_wait_cycle               (ram_write_wait_cycle),
 		.pause_core                         (pause_core),
-		.cga_hw                             (~status[44] | tandy_mode),
-		.hercules_hw                        (~status[45] & ~tandy_mode),
+		.cga_hw                             (cga_hw),
+		.hercules_hw                        (hercules_hw),
 		.swap_video                         (swap_video)
 	);
 
@@ -1465,6 +1471,9 @@ module emu
     reg HBlank_fixed = 1'b1;
     reg [1:0] HSync_del = 1'b11;
 
+    reg        video_pause_core_buf;
+    reg        video_pause_core;
+
     always_comb
     begin
         if (swap_video & ~tandy_mode)
@@ -1499,6 +1508,10 @@ module emu
         end
     end
 
+    always @ (posedge clk_56_875) begin
+        video_pause_core_buf    <= pause_core;
+        video_pause_core        <= video_pause_core_buf;
+    end
 
     video_monochrome_converter video_mono_cga 
 	(
@@ -1724,7 +1737,7 @@ module emu
         .vram_addr  ( 8'h0  ),
         .vram_we    ( 1'b0  ),
         .vram_ctrl  ( 3'b0  ),
-        .enable     ( pause_core ),
+        .enable     ( video_pause_core ),
 
         // output image
         .HB_out     ( pre2x_LHBL      ),
