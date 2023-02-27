@@ -1406,9 +1406,9 @@ module emu
 
     assign  SDIO_DAT[0] = (~mmc_dat_io & ~mmc_dat_out) ? 1'b0 : 1'bz;
     assign  mmc_dat_in  = SDIO_DAT[0];
-    assign  SDIO_DAT[1] = 1'b1;
-    assign  SDIO_DAT[2] = 1'b1;
-    assign  SDIO_DAT[3] = 1'b1;
+    assign  SDIO_DAT[1] = 1'bz;
+    assign  SDIO_DAT[2] = 1'bz;
+    assign  SDIO_DAT[3] = 1'bz;
 
     //
     ///////////////////////   VIDEO   ///////////////////////
