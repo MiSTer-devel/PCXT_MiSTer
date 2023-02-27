@@ -705,9 +705,15 @@ module KFMMC_IDE #(
                     mmc_ext_data_bus            <= mmc_access_block[31:8];
 
                     if (|remaining_sector_count) begin
-                        // Start block read
-                        mmc_write_block_address <= 1'b1;
-                        state                   <= CMD_READ_3;
+                        if (mmc_drive_busy) begin
+                            mmc_read_data           <= 1'b1;    // Dummy read
+                        end
+                        else begin
+                            mmc_read_data           <= 1'b0;
+                            // Start block read
+                            mmc_write_block_address <= 1'b1;
+                            state                   <= CMD_READ_3;
+                        end
                     end
                     else begin
                         // Complete
@@ -767,6 +773,8 @@ module KFMMC_IDE #(
 
                     if (error_flag)
                         state                   <= IDLE;
+                    else if ((command == 8'h40) || (command == 8'h41))
+                        state                   <= CMD_READ_2;
                     else begin
                         state                   <= TRANS_SECTOR_1;
                         ret_state               <= CMD_READ_2;
@@ -828,10 +836,16 @@ module KFMMC_IDE #(
 
                 // Start block write
                 CMD_WRITE_5: begin
-                    shift_fifo                  <= 1'b0;
-                    mmc_data_bus                <= 8'h81;   // 0x81 = Write command
-                    mmc_write_access_command    <= 1'b1;
-                    state                       <= CMD_WRITE_6;
+                    if (mmc_drive_busy) begin
+                        mmc_read_data               <= 1'b1;    // Dummy read
+                    end
+                    else begin
+                        mmc_read_data               <= 1'b0;
+                        shift_fifo                  <= 1'b0;
+                        mmc_data_bus                <= 8'h81;   // 0x81 = Write command
+                        mmc_write_access_command    <= 1'b1;
+                        state                       <= CMD_WRITE_6;
+                    end
                 end
 
                 // Wait
