@@ -517,6 +517,7 @@ module KFMMC_IDE #(
                     CMD_INIT_DEVICE_PARAM,
                     CMD_READ_1, CMD_READ_2, CMD_READ_3, CMD_READ_4, CMD_READ_5, CMD_READ_6,
                     CMD_WRITE_1, CMD_WRITE_2, CMD_WRITE_3, CMD_WRITE_4, CMD_WRITE_5, CMD_WRITE_6, CMD_WRITE_7, CMD_WRITE_8,
+                    CMD_SET_MULTIPLE,
                     CMD_SEEK,
                     CMD_NO_SUPPORT,
                     SET_BLOCK_ADDRESS,
@@ -645,6 +646,9 @@ module KFMMC_IDE #(
                         8'h31: state            <= CMD_WRITE_1;             // WRITE SECTOR(S) with retry
                         8'h40: state            <= CMD_READ_1;              // READ VERIFY SECTOR(S)
                         8'h41: state            <= CMD_READ_1;              // READ VERIFY SECTOR(S) with retry
+                        8'hC4: state            <= CMD_READ_1;              // READ MULTIPLE
+                        8'hC5: state            <= CMD_WRITE_1;             // WRITE MULTIPLE
+                        8'hC6: state            <= CMD_SET_MULTIPLE;        // SET MULTIPLE
                         8'h70: state            <= CMD_SEEK;                // SEEK
                         default: state          <= CMD_NO_SUPPORT;
                     endcase
@@ -902,6 +906,10 @@ module KFMMC_IDE #(
                     else begin
                         state                   <= CMD_WRITE_2;
                     end
+                end
+
+                CMD_SET_MULTIPLE: begin
+                    state                       <= IDLE;
                 end
 
                 CMD_SEEK: begin
