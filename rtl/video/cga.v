@@ -6,6 +6,10 @@
 // http://creativecommons.org/licenses/by-sa/4.0/ or send a letter to Creative
 // Commons, PO Box 1866, Mountain View, CA 94042, USA.
 //
+`ifndef ENABLE_TANDY_VIDEO
+`define ENABLE_TANDY_VIDEO 0
+`endif
+
 `default_nettype wire
 module cga(
     // Clocks
@@ -65,7 +69,7 @@ module cga(
 
     wire crtc_cs;
     wire status_cs;
-     wire tandy_newcolorsel_cs;
+    wire tandy_newcolorsel_cs;
     wire colorsel_cs;
     wire control_cs;
     //wire bus_mem_cs;
@@ -80,17 +84,17 @@ module cga(
     reg[7:0] tandy_color_reg = 8'b0000_0000;
     reg[3:0] tandy_newcolor = 4'b0000;
     reg[3:0] tandy_bordercol = 4'b0000;
-	 reg[4:0] tandy_modesel = 5'b00000;
-    reg tandy_palette_set;
+    reg[4:0] tandy_modesel = 5'b00000;
+    reg tandy_palette_set = 1'b0;
 
     wire bw_mode;
     wire mode_640;
-    wire tandy_16_mode;
+    wire tandy_16_mode = `ENABLE_TANDY_VIDEO ? tandy_video : 1'b0;
     wire video_enabled;
     wire blink_enabled;
 	 
-	 wire tandy_border_en;
-	 wire tandy_color_4;
+    wire tandy_border_en = `ENABLE_TANDY_VIDEO ? tandy_modesel[2] : 1'b0;
+    wire tandy_color_4 = `ENABLE_TANDY_VIDEO ? tandy_modesel[3] : 1'b0;
 
     wire hsync_int;
     wire vsync_l;
@@ -155,7 +159,7 @@ module cga(
     // Mapped IO
     assign crtc_cs = (bus_a[14:3] == IO_BASE_ADDR[14:3]) & ~bus_aen & cga_hw; // 3D4/3D5
     assign status_cs = (bus_a == IO_BASE_ADDR + 20'hA) & ~bus_aen & cga_hw;
-    assign tandy_newcolorsel_cs = (bus_a == IO_BASE_ADDR + 20'hE) & ~bus_aen & cga_hw;
+    assign tandy_newcolorsel_cs = `ENABLE_TANDY_VIDEO ? ((bus_a == IO_BASE_ADDR + 20'hE) & ~bus_aen & cga_hw) : 1'b0;
     assign control_cs = (bus_a == IO_BASE_ADDR + 16'h8) & ~bus_aen & cga_hw;
     assign colorsel_cs = (bus_a == IO_BASE_ADDR + 20'h9) & ~bus_aen & cga_hw;
     // Memory-mapped from B0000 to B7FFF
@@ -240,11 +244,7 @@ module cga(
     assign mode_640 = cga_control_reg[4]; // 1=640x200 mode, 0=others
     assign blink_enabled = cga_control_reg[5];
 	 
-	 assign tandy_border_en = tandy_modesel[2];
-	 assign tandy_color_4 = tandy_modesel[3];
-	 assign tandy_color_16 = tandy_modesel[4];
-
-    assign tandy_16_mode = tandy_video;
+    assign tandy_color_16 = `ENABLE_TANDY_VIDEO ? tandy_modesel[4] : 1'b0;
 
     assign hsync = hsync_int;
 
@@ -257,14 +257,14 @@ module cga(
                 cga_control_reg <= bus_d;
             end else if (colorsel_cs) begin
                 cga_color_reg <= bus_d;
-            end else if (status_cs) begin
+            end else if (`ENABLE_TANDY_VIDEO && status_cs) begin
                 tandy_color_reg <= bus_d;
-            end else if (tandy_newcolorsel_cs && tandy_color_reg[7:4] == 4'b0001) begin // Palette Mask Register
+            end else if (`ENABLE_TANDY_VIDEO && tandy_newcolorsel_cs && tandy_color_reg[7:4] == 4'b0001) begin // Palette Mask Register
                 tandy_newcolor <= bus_d[3:0];
                      tandy_palette_set <= 1'b1;
-                end else if (tandy_newcolorsel_cs && tandy_color_reg[3:0] == 4'b0010) begin // Border Color
+                end else if (`ENABLE_TANDY_VIDEO && tandy_newcolorsel_cs && tandy_color_reg[3:0] == 4'b0010) begin // Border Color
                 tandy_bordercol <= bus_d[3:0];
-            end else if (tandy_newcolorsel_cs && tandy_color_reg[3:0] == 4'b0011) begin // Mode Select
+            end else if (`ENABLE_TANDY_VIDEO && tandy_newcolorsel_cs && tandy_color_reg[3:0] == 4'b0011) begin // Mode Select
                 tandy_modesel <= bus_d[4:0];
             end
 
@@ -323,7 +323,9 @@ module cga(
     assign pixel_addr13 = grph_mode ? row_addr[0] : crtc_addr[12];
 
     // Address bit 14 is only used for Tandy modes (32K RAM)
-    assign pixel_addr14 = grph_mode ? row_addr[1] : 1'b0;
+    assign pixel_addr14 = `ENABLE_TANDY_VIDEO ? (grph_mode ? row_addr[1] : 1'b0) : 1'b0;
+
+    wire tandy_16_gfx = `ENABLE_TANDY_VIDEO ? (tandy_16_mode & grph_mode & hres_mode) : 1'b0;
 
     // Sequencer state machine
     cga_sequencer sequencer (
@@ -340,7 +342,7 @@ module cga(
         .isa_op_enable(isa_op_enable),
         .hclk(hclk),
         .lclk(lclk),
-        .tandy_16_gfx(tandy_16_mode & grph_mode & hres_mode),
+        .tandy_16_gfx(tandy_16_gfx),
 		  .tandy_color_16(tandy_color_16)
     );
 
