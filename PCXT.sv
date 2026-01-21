@@ -1638,7 +1638,7 @@ module emu
     */
 
     wire LHBL = (~swap_video_eff && border_video_ff) ? HBlank_fixed : HBlank_VGA;
-    wire LVBL = (~swap_video_eff && border_video_ff) ? std_hsyncwidth ? VGA_VBlank_border : ~VSync : VBlank;
+    wire LVBL = (~swap_video_eff && border_video_ff) ? (std_hsyncwidth ? VGA_VBlank_border : VBlank) : VBlank;
     wire VSync_hgc = VSync_line[MDA_VSYNC_DELAY];
 
     wire       pre2x_LHBL, pre2x_LVBL;

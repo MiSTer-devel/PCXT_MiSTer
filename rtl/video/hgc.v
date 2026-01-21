@@ -192,7 +192,8 @@ module hgc(
 		  .CURSOR(cursor),
 		  
 		  .MA(crtc_addr),
-		  .RA(row_addr)
+		  .RA(row_addr),
+		  .hsync_width()
 
 	 );
 	 
