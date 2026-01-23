@@ -1199,7 +1199,7 @@ end
         .hgc_rgb(hgc_rgb)
     );
 
-    hgc hgc1 
+    hgc hgc1
     (
         .clk                        (clk_vga_hgc),
         .bus_a                      (hgc_io_address_2),
@@ -1223,8 +1223,10 @@ end
         .de_o                       (de_o_hgc),
         .grph_mode                  (hgc_grph_mode),
         .grph_page                  (hgc_grph_page),
+        .std_hsyncwidth             (std_hsyncwidth_hgc),
+        .vblank_border              (vblank_border_hgc),
         .hercules_hw                (hercules_hw)
-		  
+
     );
 
     always_ff @(posedge clock)
@@ -1258,6 +1260,8 @@ end
     wire        VGA_VBlank_border_raw;
     wire        std_hsyncwidth_raw;
     wire        tandy_color_16_raw;
+    wire        std_hsyncwidth_hgc;
+    wire        vblank_border_hgc;
 
     // Sets up the card to generate a video signal
     // that will work with a standard VGA monitor
@@ -1275,8 +1279,8 @@ end
 
     wire composite_cga = tandy_video_en ? (swap_video ? ~composite : composite) : composite;
 
-    assign VGA_VBlank_border = `ENABLE_CGA ? VGA_VBlank_border_raw : 1'b0;
-    assign std_hsyncwidth = `ENABLE_CGA ? std_hsyncwidth_raw : 1'b0;
+    assign VGA_VBlank_border = `ENABLE_CGA ? VGA_VBlank_border_raw : (`ENABLE_HGC ? vblank_border_hgc : 1'b0);
+    assign std_hsyncwidth = `ENABLE_CGA ? std_hsyncwidth_raw : (`ENABLE_HGC ? std_hsyncwidth_hgc : 1'b0);
     assign tandy_color_16 = `ENABLE_CGA ? tandy_color_16_raw : 1'b0;
 
 

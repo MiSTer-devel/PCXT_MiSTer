@@ -1518,7 +1518,9 @@ module emu
 	 wire HBlank_VGA;
 
     reg [10:0] HBlank_counter = 0;
+    reg [10:0] HBlank_counter_hgc = 0;
     reg HBlank_fixed = 1'b1;
+    reg HBlank_fixed_hgc = 1'b1;
     reg [1:0] HSync_del = 1'b11;
     reg [1:0] HSync_del_hgc = 1'b11;
     localparam integer MDA_VSYNC_DELAY = 19;
@@ -1564,7 +1566,18 @@ module emu
             HBlank_del_hgc <= {HBlank_del_hgc[23:0], HBlank};
             HSync_del_hgc <= {HSync_del_hgc[0], HSync};
             if (HSync_del_hgc == 2'b01)
+            begin
                 VSync_line <= {VSync_line[MDA_VSYNC_DELAY-1:0], VSync};
+                HBlank_counter_hgc <= 0;
+                HBlank_fixed_hgc <= 1'b1;
+            end
+            else
+            begin
+                if (HBlank_counter_hgc == (std_hsyncwidth ? 120 : 143))
+                    HBlank_fixed_hgc <= 1'b0;
+                else
+                    HBlank_counter_hgc <= HBlank_counter_hgc + 1;
+            end
         end
     end
 
@@ -1622,8 +1635,8 @@ module emu
     assign CE_PIXEL = ce_pixel;
     */
 
-    wire LHBL = (~swap_video_eff && border_video_ff) ? HBlank_fixed : HBlank_VGA;
-    wire LVBL = (~swap_video_eff && border_video_ff) ? (std_hsyncwidth ? VGA_VBlank_border : VBlank) : VBlank;
+    wire LHBL = (border_video_ff) ? (swap_video_eff ? HBlank_fixed_hgc : HBlank_fixed) : HBlank_VGA;
+    wire LVBL = (border_video_ff) ? (std_hsyncwidth ? VGA_VBlank_border : VBlank) : VBlank;
     wire VSync_hgc = VSync_line[MDA_VSYNC_DELAY];
 
     wire       pre2x_LHBL, pre2x_LVBL;
