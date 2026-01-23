@@ -4,6 +4,17 @@
 //
 // Based on KFPC-XT written by @kitune-san
 //
+
+`ifndef ENABLE_CGA
+`define ENABLE_CGA 1
+`endif
+`ifndef ENABLE_HGC
+`define ENABLE_HGC 1
+`endif
+`ifndef ENABLE_TANDY_VIDEO
+`define ENABLE_TANDY_VIDEO 1
+`endif
+
 module PERIPHERALS #(
         parameter ps2_over_time = 16'd1000,
 		parameter clk_rate = 28'd50000000

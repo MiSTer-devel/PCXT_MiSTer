@@ -16,6 +16,16 @@
 //
 //============================================================================
 
+`ifndef ENABLE_CGA
+`define ENABLE_CGA 1
+`endif
+`ifndef ENABLE_HGC
+`define ENABLE_HGC 1
+`endif
+`ifndef ENABLE_TANDY_VIDEO
+`define ENABLE_TANDY_VIDEO 1
+`endif
+
 module emu
     (
         //Master input clock
@@ -320,6 +330,7 @@ module emu
     wire std_hsyncwidth;
     wire pause_core;
     wire swap_video;
+    wire swap_video_eff = `ENABLE_HGC ? (`ENABLE_CGA ? swap_video : (`ENABLE_TANDY_VIDEO ? 1'b0 : 1'b1)) : 1'b0;
 
     always @(posedge CLK_VIDEO)
     begin
