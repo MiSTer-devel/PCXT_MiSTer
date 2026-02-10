@@ -54,7 +54,9 @@ module cga(
     output tandy_color_16,
     input cga_hw,
     input[3:0] crt_h_offset,
-    input[2:0] crt_v_offset
+    input[2:0] crt_v_offset,
+    input[2:0] vsync_width_osd,
+    input[2:0] hsync_width_osd
     );
 
     parameter MDA_70HZ = 0;
@@ -306,8 +308,10 @@ module cga(
 		  
 		  .crt_h_offset(crt_h_offset),
 		  .crt_v_offset(crt_v_offset),
+		  .vsync_width_osd(vsync_width_osd),
+		  .hsync_width_osd(hsync_width_osd),
 		  .hres_mode(hres_mode)
-	 );
+		 );
 
     // CGA 80 column timings
     defparam crtc.H_TOTAL = 8'd113; // 113 // 56

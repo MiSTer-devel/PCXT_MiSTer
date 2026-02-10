@@ -168,7 +168,9 @@ module CHIPSET #(
         input   logic           hercules_hw,
         output  logic           swap_video,
         input   logic   [3:0]   crt_h_offset,
-        input   logic   [2:0]   crt_v_offset
+        input   logic   [2:0]   crt_v_offset,
+        input   logic   [2:0]   vsync_width_osd,
+        input   logic   [2:0]   hsync_width_osd
 
     );
 
@@ -394,7 +396,9 @@ module CHIPSET #(
         .hercules_hw                        (hercules_hw),
         .swap_video                         (swap_video),
         .crt_h_offset                       (crt_h_offset),
-        .crt_v_offset                       (crt_v_offset)
+        .crt_v_offset                       (crt_v_offset),
+        .vsync_width_osd                    (vsync_width_osd),
+        .hsync_width_osd                    (hsync_width_osd)
     );
 
     RAM u_RAM 
